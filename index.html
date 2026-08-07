@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>설계응답스펙트럼 · 구조물 응답 계산기</title>
+<meta name="description" content="KDS 41 17 00 기준 설계응답스펙트럼을 그리고, 감지기 계측 PGA로 구조물 응답을 비교해 한 장짜리 PDF 보고서로 뽑는 웹 도구.">
+<meta name="theme-color" content="#3182F6">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta property="og:type" content="website">
+<meta property="og:title" content="설계응답스펙트럼 · 구조물 응답 계산기">
+<meta property="og:description" content="KDS 41 17 00 기준 설계응답스펙트럼과 감지기 계측 응답을 한 화면에서 확인하세요.">
+<meta property="og:image" content="icon-512.png">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+:root{
+  --blue:#3182F6; --blue-dark:#1B64DA; --blue-bg:#E8F3FF;
+  --g900:#191F28; --g800:#333D4B; --g700:#4E5968; --g600:#6B7684;
+  --g500:#8B95A1; --g400:#B0B8C1; --g300:#D1D6DB; --g200:#E5E8EB; --g100:#F2F4F6;
+  --red:#F04452; --red-bg:#FFF0F0; --green:#00A05B; --green-bg:#E8F8F0;
+  --font:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,system-ui,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:var(--g100); color:var(--g900); font-family:var(--font);
+  font-size:15px; line-height:1.5; letter-spacing:-.01em; -webkit-font-smoothing:antialiased;
+}
+.app{max-width:680px;margin:0 auto;padding:0 20px 80px}
+
+/* ── header ── */
+.top{padding:44px 4px 24px}
+.top .kicker{font-size:13px;font-weight:600;color:var(--blue);margin-bottom:10px}
+.top h1{font-size:26px;line-height:1.34;font-weight:700;letter-spacing:-.03em;margin:0}
+.top p{margin:10px 0 0;font-size:15px;color:var(--g500);line-height:1.6}
+
+/* ── card ── */
+.card{background:#fff;border-radius:20px;padding:24px 20px;margin-bottom:14px}
+.card h2{font-size:17px;font-weight:700;letter-spacing:-.02em;margin:0 0 4px}
+.card .desc{font-size:13px;color:var(--g500);margin:0 0 18px}
+.card h2 + .group{margin-top:18px}
+.group + .group{margin-top:22px}
+.group .lab{font-size:13px;font-weight:600;color:var(--g600);margin-bottom:10px;display:block}
+
+/* ── chips ── */
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chips input{position:absolute;opacity:0;width:0;height:0;pointer-events:none}
+.chips label{
+  flex:1 1 auto;min-width:64px;text-align:center;cursor:pointer;background:var(--g100);
+  border-radius:12px;padding:11px 12px;font-size:14px;font-weight:600;color:var(--g600);
+  transition:background .15s,color .15s,transform .1s;
+}
+.chips label small{display:block;font-size:11px;font-weight:500;color:var(--g400);margin-top:2px;letter-spacing:0}
+.chips label:active{transform:scale(.97)}
+.chips input:checked + label{background:var(--blue-bg);color:var(--blue-dark)}
+.chips input:checked + label small{color:var(--blue)}
+.chips input:focus-visible + label{outline:2px solid var(--blue);outline-offset:2px}
+.chips input:disabled + label{opacity:.4;cursor:not-allowed}
+.chips.wrap5 label{flex:1 1 88px}
+.chips.mini label{flex:0 1 auto;min-width:56px;padding:9px 14px;font-size:13.5px}
+
+/* ── switch ── */
+.sw{display:flex;align-items:center;gap:14px;padding:13px 0;cursor:pointer}
+.sw + .sw{border-top:1px solid var(--g100)}
+.sw .txt{flex:1;font-size:14px;font-weight:500;color:var(--g800);line-height:1.45}
+.sw .txt small{display:block;font-size:12px;color:var(--g500);font-weight:400;margin-top:3px}
+.sw input{position:absolute;opacity:0;width:0;height:0}
+.sw .track{flex:none;width:50px;height:30px;border-radius:999px;background:var(--g300);position:relative;transition:background .2s}
+.sw .knob{position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.12);transition:transform .2s}
+.sw input:checked ~ .track{background:var(--blue)}
+.sw input:checked ~ .track .knob{transform:translateX(20px)}
+.sw input:focus-visible ~ .track{outline:2px solid var(--blue);outline-offset:2px}
+.sw input:disabled ~ .track{opacity:.4}
+
+/* ── text / number field ── */
+.tfield{background:var(--g100);border-radius:12px;padding:11px 16px;display:flex;align-items:center;gap:10px}
+.tfield input{
+  flex:1;min-width:0;border:0;background:transparent;font-family:inherit;font-size:16px;
+  font-weight:600;color:var(--g900);padding:0;letter-spacing:-.02em;
+}
+.tfield input:focus{outline:none}
+.tfield input::placeholder{color:var(--g400);font-weight:500}
+.tfield .unit{font-size:14px;font-weight:600;color:var(--g500);flex:none}
+.tfield:focus-within{box-shadow:inset 0 0 0 2px var(--blue)}
+.sub{font-size:12.5px;color:var(--g500);margin-top:8px}
+.sub b{color:var(--blue-dark);font-weight:600}
+
+/* ── stepper ── */
+.stepper{display:flex;align-items:center;justify-content:space-between;background:var(--g100);border-radius:12px;padding:8px 10px}
+.stepper .val{font-size:17px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.stepper button{
+  width:36px;height:36px;border:0;border-radius:10px;background:#fff;color:var(--g700);
+  font-size:19px;font-weight:600;cursor:pointer;line-height:1;font-family:inherit;transition:transform .1s}
+.stepper button:active{transform:scale(.94)}
+.stepper button:disabled{opacity:.35;cursor:not-allowed}
+.stepper button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+
+/* ── sensor rows ── */
+.srow{display:flex;align-items:center;gap:10px;padding:8px 0}
+.srow + .srow{border-top:1px solid var(--g100)}
+.swatch{flex:none;width:10px;height:10px;border-radius:3px}
+.srow .name{flex:1;min-width:0;background:var(--g100);border-radius:10px;padding:9px 12px;border:0;font-family:inherit;font-size:14px;font-weight:600;color:var(--g900)}
+.srow .name:focus{outline:none;box-shadow:inset 0 0 0 2px var(--blue)}
+.srow .pga{flex:0 0 108px;display:flex;align-items:center;gap:6px;background:var(--g100);border-radius:10px;padding:9px 12px}
+.srow .pga input{width:100%;min-width:0;border:0;background:transparent;font-family:inherit;font-size:14px;font-weight:700;color:var(--g900);padding:0;text-align:right;font-variant-numeric:tabular-nums}
+.srow .pga input:focus{outline:none}
+.srow .pga span{font-size:12.5px;font-weight:600;color:var(--g500)}
+.srow .pga:focus-within{box-shadow:inset 0 0 0 2px var(--blue)}
+
+/* ── result ── */
+.result{background:#fff;border-radius:20px;padding:26px 20px 8px;margin-bottom:14px}
+.result .cap{font-size:13px;color:var(--g500);margin:0 0 18px}
+.result .cap b{color:var(--g800);font-weight:600}
+.bignums{display:flex;gap:12px;flex-wrap:wrap}
+.big{flex:1 1 140px;background:var(--g100);border-radius:16px;padding:16px 18px}
+.big .k{font-size:12.5px;font-weight:600;color:var(--g600);margin-bottom:4px}
+.big .v{font-size:28px;font-weight:700;letter-spacing:-.035em;font-variant-numeric:tabular-nums;line-height:1.15}
+.big .v span{font-size:15px;font-weight:600;color:var(--g500);margin-left:3px;letter-spacing:0}
+.big.accent{background:var(--blue-bg)}
+.big.accent .k,.big.accent .v{color:var(--blue-dark)}
+.big.accent .v span{color:var(--blue)}
+.big.alert{background:var(--red-bg)}
+.big.alert .k,.big.alert .v{color:var(--red)}
+.big.alert .v span{color:var(--red)}
+.detail{margin-top:18px;border-top:1px solid var(--g100);padding-top:4px}
+.drow{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 2px;font-size:14px}
+.drow + .drow{border-top:1px solid var(--g100)}
+.drow .k{color:var(--g600)}
+.drow .v{font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.01em;text-align:right}
+.pill{display:inline-flex;align-items:center;border-radius:999px;padding:5px 13px;font-size:13px;font-weight:700;background:var(--blue);color:#fff}
+.pill.ok{background:var(--green-bg);color:var(--green)}
+.pill.no{background:var(--red-bg);color:var(--red)}
+.rhead{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.rhead .cap{flex:1}
+.btn.sm{flex:0 0 auto;min-width:0;padding:10px 18px;font-size:13.5px;margin-top:-4px}
+.fade{animation:fade .25s ease-out}
+@keyframes fade{from{opacity:.35;transform:translateY(2px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.fade{animation:none}}
+
+/* ── chart ── */
+.chart-card{position:relative;padding:24px 12px 14px}
+.chart-card h2,.chart-card .desc,.chart-card .group{padding-left:8px;padding-right:8px}
+svg.spectrum{display:block;width:100%;height:auto;touch-action:none}
+.trace{fill:none;stroke:var(--blue);stroke-width:3;stroke-linejoin:round;stroke-linecap:round}
+.trace.draw{animation:pen .5s cubic-bezier(.25,.6,.3,1) both}
+@keyframes pen{from{stroke-dashoffset:var(--len)}to{stroke-dashoffset:0}}
+@media (prefers-reduced-motion:reduce){.trace.draw{animation:none}}
+.spt{cursor:pointer}
+.gl{stroke:var(--g100);stroke-width:1}
+.axl{font-size:11px;font-weight:500;fill:var(--g400);font-family:var(--font)}
+.axt{font-size:11.5px;font-weight:600;fill:var(--g500);font-family:var(--font)}
+.mk{stroke:var(--g300);stroke-width:1.2;stroke-dasharray:3 4}
+.mkl{font-size:11px;font-weight:600;fill:var(--g500);font-family:var(--font)}
+.tline{stroke:var(--g800);stroke-width:1.4;stroke-dasharray:5 4}
+.tlab{font-size:11.5px;font-weight:700;fill:var(--g800);font-family:var(--font)}
+.cur{stroke:var(--blue);stroke-width:1.2;stroke-dasharray:3 3}
+.dot{fill:#fff;stroke:var(--blue);stroke-width:3}
+.tip{position:absolute;top:84px;right:24px;background:var(--g900);color:#fff;border-radius:12px;padding:9px 13px;font-size:13px;font-weight:600;line-height:1.45;pointer-events:none;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.tip em{font-style:normal;color:var(--g400);font-weight:500}
+.legend{display:flex;flex-wrap:wrap;gap:8px 16px;padding:12px 8px 4px}
+.lg{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:var(--g600)}
+.lg i{width:14px;height:3px;border-radius:2px;display:inline-block}
+.lg i.pt{width:10px;height:10px;border-radius:50%}
+
+/* ── table ── */
+.tools{display:flex;gap:8px;flex-wrap:wrap}
+.btn{flex:1;min-width:130px;border:0;border-radius:12px;padding:13px 14px;cursor:pointer;font-family:inherit;font-size:14.5px;font-weight:700;letter-spacing:-.01em;background:var(--g100);color:var(--g700);transition:background .15s,transform .1s}
+.btn:active{transform:scale(.98)}
+.btn:hover{background:var(--g200)}
+.btn.primary{background:var(--blue);color:#fff}
+.btn.primary:hover{background:var(--blue-dark)}
+.btn:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.tbl-scroll{max-height:360px;overflow:auto;margin:0 -4px;border-radius:12px}
+.tbl-scroll.auto{max-height:none}
+table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+thead th{position:sticky;top:0;background:#fff;text-align:right;font-size:12px;font-weight:600;color:var(--g500);padding:8px 10px 10px}
+thead th:first-child{text-align:left}
+tbody td{padding:9px 10px;text-align:right;color:var(--g700);border-top:1px solid var(--g100)}
+tbody td:first-child{text-align:left;color:var(--g900);font-weight:600}
+tbody tr.key td{background:var(--blue-bg);color:var(--blue-dark)}
+tbody tr.key td:first-child{color:var(--blue-dark)}
+.tag{display:inline-block;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:700}
+.tag.ok{background:var(--green-bg);color:var(--green)}
+.tag.no{background:var(--red-bg);color:var(--red)}
+.namecell{display:flex;align-items:center;gap:8px}
+.empty{padding:26px 10px;text-align:center;color:var(--g400);font-size:13.5px}
+
+/* ── notes ── */
+.notes .nrow{display:flex;gap:10px;padding:10px 0;font-size:13px;color:var(--g500);line-height:1.6}
+.notes .nrow b{color:var(--g700);font-weight:600}
+.notes .ic{flex:none;width:18px;height:18px;border-radius:50%;background:var(--g200);color:var(--g600);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:2px}
+.notes .nrow.warn .ic{background:var(--red-bg);color:var(--red)}
+.foot{text-align:center;font-size:12px;color:var(--g400);padding:22px 0 0;line-height:1.7}
+
+
+/* ══ 보고서 (인쇄 / PDF) ══ */
+#report{display:none}
+#report *{box-sizing:border-box}
+@media print{
+  html,body{background:#fff!important}
+  .app{display:none!important}
+  #report{display:block}
+  @page{size:A4 portrait;margin:11mm 12mm}
+}
+#report{
+  font-family:var(--font);color:#191F28;
+  -webkit-print-color-adjust:exact;print-color-adjust:exact;
+}
+.rp-head{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;
+  border-bottom:2px solid #191F28;padding-bottom:7px;margin-bottom:11px}
+.rp-kicker{font-size:8.5pt;font-weight:700;color:#3182F6;letter-spacing:.02em}
+.rp-head h1{font-size:16pt;font-weight:700;letter-spacing:-.02em;margin:3px 0 0;line-height:1.2}
+.rp-head .meta{font-size:8pt;color:#6B7684;text-align:right;line-height:1.5;white-space:nowrap}
+.rp-sec{margin-bottom:10px;break-inside:avoid}
+.rp-sec h2{font-size:10pt;font-weight:700;margin:0 0 6px;padding-left:7px;border-left:3px solid #3182F6;line-height:1.25}
+.rp-grid{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid #D1D6DB;border-left:1px solid #D1D6DB}
+.rp-grid div{border-right:1px solid #D1D6DB;border-bottom:1px solid #D1D6DB;padding:4px 8px;font-size:8pt;line-height:1.35}
+.rp-grid div .k{color:#6B7684;font-size:7.5pt}
+.rp-grid div .v{font-weight:700;font-size:9pt;letter-spacing:-.01em}
+.rp-grid div.hl{background:#E8F3FF}
+.rp-grid div.hl .v{color:#1B64DA}
+.rp-chart{border:1px solid #E5E8EB;border-radius:4px;padding:4px 6px 0}
+.rp-chart svg{display:block;width:100%;height:auto;max-height:74mm}
+table.rp-tbl{width:100%;border-collapse:collapse;font-size:8pt}
+table.rp-tbl th{background:#F2F4F6;color:#4E5968;font-weight:700;font-size:7.5pt;
+  padding:4px 7px;text-align:right;border-bottom:1px solid #D1D6DB}
+table.rp-tbl th:first-child{text-align:left}
+table.rp-tbl td{padding:3.2px 7px;text-align:right;border-bottom:1px solid #EDEFF2;line-height:1.3}
+table.rp-tbl td:first-child{text-align:left;font-weight:600}
+table.rp-tbl .sw{display:inline-block;width:7px;height:7px;border-radius:2px;margin-right:5px;vertical-align:middle}
+table.rp-tbl .ok{color:#00A05B;font-weight:700}
+table.rp-tbl .no{color:#F04452;font-weight:700}
+.rp-judge{margin:7px 0 0;font-size:8.5pt;font-weight:700;padding:6px 10px;border-radius:4px;background:#E8F8F0;color:#00A05B}
+.rp-judge.no{background:#FFF0F0;color:#F04452}
+.rp-foot{margin-top:10px;border-top:1px solid #D1D6DB;padding-top:6px;font-size:7pt;color:#8B95A1;line-height:1.5}
+
+/* ── 반응형 : 태블릿·PC ── */
+@media (min-width:900px){
+  .app{max-width:1000px;padding:0 24px 96px}
+  .top{padding:56px 4px 28px}
+  .top h1{font-size:32px}
+  .card,.result{padding:26px 24px}
+  .result{padding-bottom:10px}
+  .big .v{font-size:32px}
+}
+@media (min-width:1180px){
+  .app{max-width:1400px}
+  .layout{display:grid;grid-template-columns:400px minmax(0,1fr);gap:20px;align-items:start}
+  .col-left{position:sticky;top:20px;max-height:calc(100vh - 40px);overflow-y:auto;padding-right:4px;scrollbar-width:thin}
+  .col-left::-webkit-scrollbar{width:6px}
+  .col-left::-webkit-scrollbar-thumb{background:var(--g300);border-radius:3px}
+  .col-right{min-width:0}
+  .top h1{font-size:34px}
+  .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
+  .grid2 > .card{margin-bottom:0}
+  .chart-card{padding:26px 18px 16px}
+  .tbl-scroll{max-height:420px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="top">
+    <div class="kicker">KDS 41 17 00 · 건축물 내진설계기준</div>
+    <h1>설계응답스펙트럼과 구조물 응답,<br>한 화면에서 확인해요</h1>
+    <p>부지 조건으로 스펙트럼을 그리고, 감지기가 계측한 PGA로 구조물이 실제로 얼마나 흔들렸는지 함께 찍어드려요.</p>
+  </header>
+
+  <div class="layout">
+
+    <!-- ══════════ 입력 ══════════ -->
+    <div class="col-left">
+
+      <section class="card">
+        <h2>어디에 짓는 건물인가요?</h2>
+        <p class="desc">부지의 지진구역과 지반종류를 골라주세요</p>
+        <div class="group">
+          <span class="lab">지진구역</span>
+          <div class="chips">
+            <input type="radio" name="zone" id="z1" value="0.11" checked><label for="z1">구역 I<small>Z = 0.11</small></label>
+            <input type="radio" name="zone" id="z2" value="0.07"><label for="z2">구역 II<small>Z = 0.07</small></label>
+          </div>
+        </div>
+        <div class="group">
+          <span class="lab">지반종류</span>
+          <div class="chips wrap5">
+            <input type="radio" name="soil" id="s1" value="S1"><label for="s1">S1<small>암반</small></label>
+            <input type="radio" name="soil" id="s2" value="S2"><label for="s2">S2<small>얕고 단단</small></label>
+            <input type="radio" name="soil" id="s3" value="S3"><label for="s3">S3<small>얕고 연약</small></label>
+            <input type="radio" name="soil" id="s4" value="S4" checked><label for="s4">S4<small>깊고 단단</small></label>
+            <input type="radio" name="soil" id="s5" value="S5"><label for="s5">S5<small>깊고 연약</small></label>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>어떤 지진을 볼까요?</h2>
+        <p class="desc">성능목표에 맞는 재현주기와 내진등급을 골라주세요</p>
+        <div class="group">
+          <span class="lab">재현주기</span>
+          <div class="chips wrap5">
+            <input type="radio" name="ret" id="r2400" value="1.5"><label for="r2400">2400년<small>최대고려</small></label>
+            <input type="radio" name="ret" id="r1400" value="1.2"><label for="r1400">1400년<small>인명보호</small></label>
+            <input type="radio" name="ret" id="r1000" value="1" checked><label for="r1000">1000년<small>기본설계</small></label>
+            <input type="radio" name="ret" id="r100" value="0.43"><label for="r100">100년<small>기능수행</small></label>
+            <input type="radio" name="ret" id="r50" value="0.30"><label for="r50">50년<small>기능수행</small></label>
+          </div>
+        </div>
+        <div class="group">
+          <span class="lab">내진등급</span>
+          <div class="chips">
+            <input type="radio" name="grade" id="g0" value="특"><label for="g0">특</label>
+            <input type="radio" name="grade" id="g1" value="I"><label for="g1">1등급</label>
+            <input type="radio" name="grade" id="g2" value="II" checked><label for="g2">2등급</label>
+          </div>
+        </div>
+        <div class="group">
+          <span class="lab">감쇠비</span>
+          <div class="chips mini">
+            <input type="radio" name="damp" id="d2" value="2"><label for="d2">2%</label>
+            <input type="radio" name="damp" id="d3" value="3"><label for="d3">3%</label>
+            <input type="radio" name="damp" id="d5" value="5" checked><label for="d5">5%</label>
+            <input type="radio" name="damp" id="d7" value="7"><label for="d7">7%</label>
+            <input type="radio" name="damp" id="d10" value="10"><label for="d10">10%</label>
+            <input type="radio" name="damp" id="d20" value="20"><label for="d20">20%</label>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>구조물 정보</h2>
+        <p class="desc">고유진동수를 넣으면 그 주기에서의 응답을 찍어드려요</p>
+        <div class="group">
+          <span class="lab">구조물 명</span>
+          <div class="tfield"><input type="text" id="stName" value="제1호 관리동" placeholder="예: 제1호 관리동"></div>
+        </div>
+        <div class="group">
+          <span class="lab">고유진동수</span>
+          <div class="tfield"><input type="number" id="stFreq" value="4" min="0.05" max="50" step="0.1"><span class="unit">Hz</span></div>
+          <p class="sub">고유주기 T = <b id="stPeriod">0.250초</b></p>
+        </div>
+        <div class="group">
+          <span class="lab">감지기 수량</span>
+          <div class="stepper">
+            <button type="button" id="sMinus" aria-label="감지기 줄이기">−</button>
+            <span class="val"><span id="sCount">3</span>대</span>
+            <button type="button" id="sPlus" aria-label="감지기 늘리기">+</button>
+          </div>
+        </div>
+        <div class="group">
+          <span class="lab">감지기별 계측 PGA</span>
+          <div id="sensorList"></div>
+          <p class="sub">구조물 고유주기 위치에 감지기 수만큼 점으로 찍어요. 최대 15대까지 넣을 수 있어요.</p>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>세부 조정</h2>
+        <p class="desc">해당하는 조건이 있다면 켜주세요</p>
+        <label class="sw">
+          <span class="txt">유효지반가속도 직접 입력<small>국가지진위험지도에서 읽은 값을 쓸게요</small></span>
+          <input type="checkbox" id="sManualOn"><span class="track"><span class="knob"></span></span>
+        </label>
+        <div class="tfield" id="sManualBox" style="display:none;margin-top:12px">
+          <input type="number" id="sManual" value="0.220" min="0.01" max="1" step="0.001" aria-label="유효지반가속도 S"><span class="unit">g</span>
+        </div>
+        <label class="sw">
+          <span class="txt">F<sub>v</sub>의 80% 적용<small>기반암 깊이 20m 초과, V<sub>s</sub> 360m/s 이상일 때</small></span>
+          <input type="checkbox" id="fv80"><span class="track"><span class="knob"></span></span>
+        </label>
+        <label class="sw">
+          <span class="txt">F<sub>a</sub>·F<sub>v</sub>의 110% 적용<small>S5 지반이면서 기반암 깊이가 불분명할 때</small></span>
+          <input type="checkbox" id="f110"><span class="track"><span class="knob"></span></span>
+        </label>
+      </section>
+
+    </div>
+
+    <!-- ══════════ 결과 ══════════ -->
+    <div class="col-right">
+
+      <section class="result" id="resultCard">
+        <div class="rhead">
+          <p class="cap" id="cap">지금 조건이에요</p>
+          <button class="btn primary sm" id="btnPdf" type="button">PDF 보고서</button>
+        </div>
+        <div class="bignums">
+          <div class="big accent"><div class="k">S<sub>DS</sub> 단주기</div><div class="v" id="vSDS">0.000<span>g</span></div></div>
+          <div class="big accent"><div class="k">S<sub>D1</sub> 주기 1초</div><div class="v" id="vSD1">0.000<span>g</span></div></div>
+          <div class="big" id="boxDemand"><div class="k">설계 응답 S<sub>a</sub>(T)</div><div class="v" id="vDemand">0.000<span>g</span></div></div>
+          <div class="big" id="boxMax"><div class="k">계측 최대 PGA</div><div class="v" id="vMax">0.000<span>g</span></div></div>
+        </div>
+        <div class="detail">
+          <div class="drow"><span class="k">유효지반가속도 S</span><span class="v" id="vS">—</span></div>
+          <div class="drow"><span class="k">지반증폭계수 F<sub>a</sub> / F<sub>v</sub></span><span class="v" id="vF">—</span></div>
+          <div class="drow"><span class="k">제어주기 T<sub>0</sub> / T<sub>S</sub></span><span class="v" id="vT">—</span></div>
+          <div class="drow"><span class="k">설계 지표면가속도 S<sub>a</sub>(0)</span><span class="v" id="vPGA0">—</span></div>
+          <div class="drow"><span class="k">내진설계범주</span><span class="v"><span class="pill" id="vCat">—</span></span></div>
+          <div class="drow"><span class="k">설계 S<sub>a</sub>(T) 대비 계측 최대</span><span class="v"><span class="pill ok" id="vJudge">—</span></span></div>
+        </div>
+      </section>
+
+      <section class="card chart-card">
+        <h2>스펙트럼 곡선</h2>
+        <p class="desc" id="chartDesc">곡선 위를 눌러 값을 확인해 보세요</p>
+        <div id="chart"></div>
+        <div class="tip" id="tip"><em>T</em> — s<br><em>Sa</em> — g</div>
+        <div class="legend" id="legend"></div>
+        <div class="group">
+          <span class="lab">보는 범위</span>
+          <div class="chips mini">
+            <input type="radio" name="tmax" id="t2" value="2"><label for="t2">2초</label>
+            <input type="radio" name="tmax" id="t4" value="4" checked><label for="t4">4초</label>
+            <input type="radio" name="tmax" id="t6" value="6"><label for="t6">6초</label>
+            <input type="radio" name="tmax" id="t10" value="10"><label for="t10">10초</label>
+          </div>
+        </div>
+      </section>
+
+      <div class="grid2">
+
+        <section class="card">
+          <h2>감지기별 응답</h2>
+          <p class="desc" id="sensorDesc">고유주기에서 설계값과 비교한 결과예요</p>
+          <div class="tbl-scroll auto">
+            <table>
+              <thead><tr><th>감지기</th><th>계측 PGA (g)</th><th>m/s²</th><th>환산 변위 (mm)</th><th>설계 대비</th></tr></thead>
+              <tbody id="sbody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>주기별 값</h2>
+          <p class="desc">필요한 형식으로 가져가세요</p>
+          <div class="group" style="margin-top:0">
+            <span class="lab">주기 간격</span>
+            <div class="chips mini">
+              <input type="radio" name="dt" id="dt01" value="0.01"><label for="dt01">0.01초</label>
+              <input type="radio" name="dt" id="dt05" value="0.05" checked><label for="dt05">0.05초</label>
+              <input type="radio" name="dt" id="dt1" value="0.1"><label for="dt1">0.1초</label>
+              <input type="radio" name="dt" id="dt2" value="0.2"><label for="dt2">0.2초</label>
+            </div>
+          </div>
+          <div class="tools" style="margin:18px 0 16px">
+            <button class="btn primary" id="btnCsv" type="button">CSV로 저장하기</button>
+            <button class="btn" id="btnCopy" type="button">표 복사하기</button>
+          </div>
+          <div class="tbl-scroll">
+            <table>
+              <thead><tr><th>T (s)</th><th>Sa (g)</th><th>Sa (m/s²)</th><th>Sd (mm)</th></tr></thead>
+              <tbody id="tbody"></tbody>
+            </table>
+          </div>
+        </section>
+
+      </div>
+
+      <section class="card">
+        <h2>계산에 쓴 식</h2>
+        <div class="notes">
+          <div class="nrow"><span class="ic">1</span><span><b>S<sub>DS</sub> = S × 2.5 × F<sub>a</sub> × 2/3</b>, <b>S<sub>D1</sub> = S × F<sub>v</sub> × 2/3</b> 이고, T<sub>S</sub> = S<sub>D1</sub>/S<sub>DS</sub>, T<sub>0</sub> = 0.2T<sub>S</sub>, T<sub>L</sub> = 5초예요.</span></div>
+          <div class="nrow"><span class="ic">2</span><span>구간별로 T ≤ T<sub>0</sub>에서는 S<sub>DS</sub>(0.6T/T<sub>0</sub>+0.4), T<sub>0</sub>~T<sub>S</sub>에서는 S<sub>DS</sub>, T<sub>S</sub>~T<sub>L</sub>에서는 S<sub>D1</sub>/T, 그 뒤로는 S<sub>D1</sub>T<sub>L</sub>/T²을 써요.</span></div>
+          <div class="nrow"><span class="ic">3</span><span>감지기 값은 계측된 <b>PGA 한 점</b>이라 구조물 고유주기 T 위치에 점으로만 찍어요. 그 점이 설계 곡선 아래에 있으면 설계 이내, 위로 올라가면 설계 초과예요.</span></div>
+          <div class="nrow"><span class="ic">4</span><span>감쇠비 5% 외의 값은 η = √(10/(5+ξ)) ≥ 0.55 (Eurocode 8) 보정이에요. KDS에는 규정이 없으니 참고용으로만 봐주세요.</span></div>
+          <div class="nrow warn"><span class="ic">!</span><span>검토용 계산이에요. 실제 설계와 지진 후 안전성 판단은 KDS 41 17 00 원문, 계측 원파형, 책임구조기술자의 검토를 거쳐야 해요.</span></div>
+        </div>
+        <p class="foot">KDS 41 17 00 : 2022 · KDS 17 10 00 기준<br>지반종류 S6은 부지고유 응답해석 대상이라 빠져 있어요</p>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════ PDF 보고서 ══════════ -->
+<div id="report">
+  <div class="rp-head">
+    <div>
+      <div class="rp-kicker">KDS 41 17 00 : 2022 · 설계응답스펙트럼 검토</div>
+      <h1 id="rpTitle">구조물</h1>
+    </div>
+    <div class="meta" id="rpMeta"></div>
+  </div>
+
+  <section class="rp-sec">
+    <h2>1. 설계조건 및 스펙트럼 파라미터</h2>
+    <div class="rp-grid" id="rpParams"></div>
+  </section>
+
+  <section class="rp-sec">
+    <h2>2. 설계응답스펙트럼 및 계측 응답</h2>
+    <div class="rp-chart" id="rpChart"></div>
+  </section>
+
+  <section class="rp-sec">
+    <h2>3. 감지기별 계측 응답</h2>
+    <div id="rpTable"></div>
+    <p class="rp-judge" id="rpJudge"></p>
+  </section>
+
+  <div class="rp-foot">
+    S<sub>DS</sub> = S × 2.5 × F<sub>a</sub> × 2/3, S<sub>D1</sub> = S × F<sub>v</sub> × 2/3, T<sub>S</sub> = S<sub>D1</sub>/S<sub>DS</sub>, T<sub>0</sub> = 0.2T<sub>S</sub>, T<sub>L</sub> = 5초 (KDS 41 17 00 : 2022 4.2).
+    감지기 값은 계측된 PGA 단일 값으로, 구조물 고유주기 T 위치에서 설계 스펙트럼가속도와 비교한 것입니다. 환산 변위는 SDOF 근사 S<sub>a</sub>·g·T²/4π² 입니다.
+    감쇠비 5% 외의 값은 η = √(10/(5+ξ)) ≥ 0.55 (Eurocode 8) 보정으로, KDS에 규정된 절차가 아닙니다.
+    본 보고서는 검토용 산출물이며, 실제 판단은 계측 원파형 분석과 책임구조기술자의 검토를 거쳐야 합니다.
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* KDS 41 17 00 : 2022 지반증폭계수 (표 4.2-1, 4.2-2) — 열: S≤0.1 / 0.2 / 0.3 */
+var FA = {S1:[1.12,1.12,1.12], S2:[1.4,1.4,1.3], S3:[1.7,1.5,1.3], S4:[1.6,1.4,1.2], S5:[1.8,1.3,1.3]};
+var FV = {S1:[0.84,0.84,0.84], S2:[1.5,1.4,1.3], S3:[1.7,1.6,1.5], S4:[2.2,2.0,1.8], S5:[3.0,2.7,2.4]};
+var TL = 5.0, G = 9.80665;
+var COLORS = ['#F04452','#00A05B','#FF9500','#8B5CF6','#00A9E0','#E8618C','#7A5C3E','#4B5AF5',
+              '#12B886','#F59F00','#C2255C','#495057','#5C940D','#E8590C','#0B7285'];
+var MAX_SENSOR = 15;
+
+function $(id){ return document.getElementById(id); }
+function rv(name){ return document.querySelector('input[name='+name+']:checked').value; }
+function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+/* ── 감지기 상태 ── */
+var sensors = [
+  {name:'감지기 1', pga:0.120},
+  {name:'감지기 2', pga:0.095},
+  {name:'감지기 3', pga:0.070}
+];
+
+function renderSensorRows(){
+  var html = '';
+  sensors.forEach(function(s, i){
+    html += '<div class="srow">' +
+      '<span class="swatch" style="background:'+COLORS[i % COLORS.length]+'"></span>' +
+      '<input class="name" type="text" data-i="'+i+'" value="'+esc(s.name)+'" aria-label="감지기 이름">' +
+      '<span class="pga"><input type="number" data-i="'+i+'" step="0.001" min="0" max="5" value="'+s.pga.toFixed(3)+'" aria-label="계측 PGA"><span>g</span></span>' +
+      '</div>';
+  });
+  $('sensorList').innerHTML = html;
+  $('sCount').textContent = sensors.length;
+  $('sMinus').disabled = sensors.length <= 0;
+  $('sPlus').disabled = sensors.length >= MAX_SENSOR;
+}
+
+$('sensorList').addEventListener('input', function(ev){
+  var el = ev.target, i = parseInt(el.dataset.i, 10);
+  if(isNaN(i) || !sensors[i]) return;
+  if(el.type === 'number'){
+    var v = parseFloat(el.value);
+    sensors[i].pga = isNaN(v) ? 0 : Math.max(0, v);
+  } else {
+    sensors[i].name = el.value;
+  }
+  render(false);
+});
+
+$('sPlus').addEventListener('click', function(){
+  if(sensors.length >= MAX_SENSOR) return;
+  sensors.push({name:'감지기 ' + (sensors.length + 1), pga:0.100});
+  renderSensorRows(); render(true);
+});
+$('sMinus').addEventListener('click', function(){
+  if(!sensors.length) return;
+  sensors.pop(); renderSensorRows(); render(true);
+});
+
+/* ── 스펙트럼 계산 ── */
+function amp(t, S){
+  if(S <= 0.1) return t[0];
+  if(S >= 0.3) return t[2];
+  if(S <= 0.2) return t[0] + (t[1]-t[0])*(S-0.1)/0.1;
+  return t[1] + (t[2]-t[1])*(S-0.2)/0.1;
+}
+
+function readInputs(){
+  var Z = parseFloat(rv('zone'));
+  var manual = $('sManualOn').checked;
+  var Sbase = Z * 2.0;
+  var S = manual ? Math.max(0.001, parseFloat($('sManual').value) || Sbase) : Sbase;
+  var xi = parseFloat(rv('damp'));
+  var freq = Math.max(0.05, parseFloat($('stFreq').value) || 4);
+  var retId = document.querySelector('input[name=ret]:checked').id;
+  return {
+    Z:Z, soil:rv('soil'), manual:manual, S:S,
+    fv80:$('fv80').checked, f110:$('f110').checked,
+    scale:parseFloat(rv('ret')),
+    retLabel:document.querySelector('label[for='+retId+']').firstChild.nodeValue,
+    grade:rv('grade'), xi:xi,
+    eta:Math.max(0.55, Math.sqrt(10/(5+xi))),
+    tmax:parseFloat(rv('tmax')), dt:parseFloat(rv('dt')),
+    stName:($('stName').value || '구조물'), freq:freq, T:1/freq
+  };
+}
+
+function compute(inp){
+  var Fa = amp(FA[inp.soil], inp.S), Fv = amp(FV[inp.soil], inp.S);
+  if(inp.fv80) Fv *= 0.8;
+  if(inp.f110){ Fa *= 1.1; Fv *= 1.1; }
+  var SDS0 = inp.S * 2.5 * Fa * (2/3);
+  var SD10 = inp.S * Fv * (2/3);
+  var SDS = SDS0 * inp.scale, SD1 = SD10 * inp.scale;
+  var Ts = SD1 / SDS;
+  return {Fa:Fa, Fv:Fv, SDS0:SDS0, SD10:SD10, SDS:SDS, SD1:SD1, Ts:Ts, T0:0.2*Ts};
+}
+
+function Sa(T, r, eta){
+  var v;
+  if(T <= 0) v = 0.4 * r.SDS;
+  else if(T <= r.T0) v = r.SDS * (0.6*T/r.T0 + 0.4);
+  else if(T <= r.Ts) v = r.SDS;
+  else if(T <= TL) v = r.SD1 / T;
+  else v = r.SD1 * TL / (T*T);
+  return v * eta;
+}
+function disp(saG, T){ return saG * G * T * T / (4 * Math.PI * Math.PI) * 1000; }
+
+function category(SDS, SD1, grade){
+  var i = (grade === '특') ? 0 : (grade === 'I' ? 1 : 2);
+  var a = SDS >= 0.50 ? ['D','D','D'] : SDS >= 0.33 ? ['D','C','C'] : SDS >= 0.17 ? ['C','B','B'] : ['A','A','A'];
+  var b = SD1 >= 0.20 ? ['D','D','D'] : SD1 >= 0.14 ? ['D','C','C'] : SD1 >= 0.07 ? ['C','B','B'] : ['A','A','A'];
+  var o = ['A','B','C','D'];
+  return o[Math.max(o.indexOf(a[i]), o.indexOf(b[i]))];
+}
+
+/* ── 차트 ── */
+var W = 760, H = 400, M = {t:30, r:22, b:46, l:52};
+var PW = W - M.l - M.r, PH = H - M.t - M.b;
+var chartState = null;
+
+function niceStep(range, target){
+  var raw = range / target;
+  var mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  var n = raw / mag;
+  var s = n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10;
+  return s * mag;
+}
+
+function pathFor(r, eta, tmax, xs, ys){
+  var pts = [];
+  var push = function(T){ if(T >= 0 && T <= tmax) pts.push(T); };
+  for(var i = 0; i <= 420; i++) push(tmax * i / 420);
+  [r.T0, r.Ts, TL, r.T0*0.999, r.Ts*0.999, r.Ts*1.001].forEach(push);
+  pts.sort(function(a,b){ return a-b; });
+  var d = '';
+  pts.forEach(function(T, i){ d += (i ? 'L' : 'M') + xs(T).toFixed(2) + ' ' + ys(Sa(T, r, eta)).toFixed(2) + ' '; });
+  return d;
+}
+
+function drawChart(inp, r, rows, animate){
+  var tmax = inp.tmax;
+  var peak = rows.reduce(function(m, s){ return Math.max(m, s.pga); }, r.SDS * inp.eta);
+  var yStep = niceStep(peak * 1.2, 4);
+  var ymax = Math.max(0.05, yStep * Math.ceil(peak * 1.2 / yStep));
+  var xs = function(T){ return M.l + T / tmax * PW; };
+  var ys = function(v){ return M.t + PH - Math.min(v, ymax) / ymax * PH; };
+
+  var g = '<defs><linearGradient id="fillGrad" x1="0" y1="0" x2="0" y2="1">' +
+          '<stop offset="0%" stop-color="#3182F6" stop-opacity=".16"/>' +
+          '<stop offset="100%" stop-color="#3182F6" stop-opacity="0"/></linearGradient></defs>';
+
+  for(var v = 0; v <= ymax + 1e-9; v += yStep){
+    g += '<line class="gl" x1="'+M.l+'" y1="'+ys(v)+'" x2="'+(M.l+PW)+'" y2="'+ys(v)+'"/>';
+    g += '<text class="axl" x="'+(M.l-10)+'" y="'+(ys(v)+4)+'" text-anchor="end">'+v.toFixed(2)+'</text>';
+  }
+  [[r.T0,'T₀'],[r.Ts,'Ts'],[TL,'TL']].forEach(function(m){
+    if(m[0] > tmax || m[0] <= 0) return;
+    g += '<line class="mk" x1="'+xs(m[0])+'" y1="'+M.t+'" x2="'+xs(m[0])+'" y2="'+(M.t+PH)+'"/>';
+    g += '<text class="mkl" x="'+(xs(m[0])+5)+'" y="'+(M.t+11)+'">'+m[1]+'</text>';
+  });
+
+  var dDesign = pathFor(r, inp.eta, tmax, xs, ys);
+  g += '<path d="'+(dDesign + 'L'+xs(tmax).toFixed(2)+' '+ys(0).toFixed(2)+' L'+xs(0).toFixed(2)+' '+ys(0).toFixed(2)+' Z')+'" fill="url(#fillGrad)"/>';
+  g += '<path id="trace" class="trace'+(animate?' draw':'')+'" d="'+dDesign+'"/>';
+
+  /* 구조물 고유주기 */
+  var T = inp.T;
+  if(T > 0 && T <= tmax){
+    g += '<line class="tline" x1="'+xs(T)+'" y1="'+M.t+'" x2="'+xs(T)+'" y2="'+(M.t+PH)+'"/>';
+    var anchor = xs(T) > M.l + PW - 110 ? 'end' : 'start';
+    var lx = xs(T) + (anchor === 'end' ? -6 : 6);
+    g += '<text class="tlab" x="'+lx+'" y="'+(M.t-11)+'" text-anchor="'+anchor+'">'+esc(inp.stName)+' T='+T.toFixed(3)+'s</text>';
+    g += '<circle cx="'+xs(T)+'" cy="'+ys(Sa(T, r, inp.eta))+'" r="5.5" fill="#3182F6" stroke="#fff" stroke-width="2.5"/>';
+    rows.forEach(function(s){
+      g += '<g class="spt"><title>'+esc(s.name)+' · PGA '+s.pga.toFixed(3)+'g</title>' +
+           '<circle cx="'+xs(T)+'" cy="'+ys(s.pga)+'" r="6" fill="'+s.color+'" stroke="#fff" stroke-width="2.5"/></g>';
+    });
+  }
+
+  var xStep = niceStep(tmax, 6);
+  for(var t = 0; t <= tmax + 1e-9; t += xStep){
+    g += '<text class="axl" x="'+xs(t)+'" y="'+(M.t+PH+22)+'" text-anchor="middle">'+(+t.toFixed(2))+'</text>';
+  }
+  g += '<text class="axt" x="'+(M.l+PW)+'" y="'+(M.t+PH+40)+'" text-anchor="end">주기 T (초)</text>';
+  g += '<text class="axt" x="'+(M.l-10)+'" y="'+(M.t-12)+'" text-anchor="start">Sa (g)</text>';
+  g += '<g id="cursor" style="display:none"><line class="cur" y1="'+M.t+'" y2="'+(M.t+PH)+'"/><circle class="dot" r="5"/></g>';
+  g += '<rect id="hit" x="'+M.l+'" y="'+(M.t-18)+'" width="'+PW+'" height="'+(PH+18)+'" fill="transparent"/>';
+
+  $('chart').innerHTML = '<svg class="spectrum" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="설계응답스펙트럼과 감지기별 추정 스펙트럼">'+g+'</svg>';
+
+  var path = $('trace');
+  if(animate && path.getTotalLength){
+    var len = path.getTotalLength();
+    path.style.setProperty('--len', len);
+    path.style.strokeDasharray = len;
+  }
+  chartState = {xs:xs, ys:ys, tmax:tmax, r:r, eta:inp.eta};
+  bindCursor();
+
+  var lg = '<span class="lg"><i style="background:#3182F6"></i>설계 스펙트럼</span>' +
+           '<span class="lg"><i class="pt" style="background:#3182F6"></i>설계 Sa(T)</span>';
+  rows.forEach(function(s){
+    lg += '<span class="lg"><i class="pt" style="background:'+s.color+'"></i>'+esc(s.name)+' '+s.pga.toFixed(3)+'g</span>';
+  });
+  $('legend').innerHTML = lg;
+}
+
+function bindCursor(){
+  var hit = $('hit'), cur = $('cursor'), tip = $('tip');
+  if(!hit) return;
+  var svg = hit.ownerSVGElement;
+  function move(ev){
+    var rect = svg.getBoundingClientRect();
+    var x = (ev.clientX - rect.left) / rect.width * W;
+    var st = chartState;
+    var T = Math.min(st.tmax, Math.max(0, (x - M.l) / PW * st.tmax));
+    var v = Sa(T, st.r, st.eta);
+    cur.style.display = '';
+    cur.querySelector('line').setAttribute('x1', st.xs(T));
+    cur.querySelector('line').setAttribute('x2', st.xs(T));
+    cur.querySelector('circle').setAttribute('cx', st.xs(T));
+    cur.querySelector('circle').setAttribute('cy', st.ys(v));
+    tip.innerHTML = '<em>T</em> ' + T.toFixed(3) + ' s<br><em>Sa</em> ' + v.toFixed(4) + ' g';
+  }
+  hit.addEventListener('pointermove', move);
+  hit.addEventListener('pointerdown', move);
+  hit.addEventListener('pointerleave', function(){
+    cur.style.display = 'none';
+    tip.innerHTML = '<em>T</em> — s<br><em>Sa</em> — g';
+  });
+}
+
+/* ── 표 ── */
+var csvRows = [], sensorCsv = [];
+
+function buildTable(inp, r){
+  var keys = [r.T0, r.Ts, TL, inp.T].filter(function(t){ return t > 0 && t <= inp.tmax; });
+  var set = [];
+  for(var T = 0; T <= inp.tmax + 1e-9; T += inp.dt) set.push(+T.toFixed(4));
+  keys.forEach(function(t){ set.push(+t.toFixed(4)); });
+  set.sort(function(a,b){ return a-b; });
+
+  var html = '', prev = -1;
+  csvRows = [['T(s)','Sa(g)','Sa(m/s2)','Sd(mm)']];
+  set.forEach(function(T){
+    if(Math.abs(T - prev) < 1e-6) return;
+    prev = T;
+    var v = Sa(T, r, inp.eta);
+    var isKey = keys.some(function(k){ return Math.abs(k - T) < 1e-6; });
+    html += '<tr'+(isKey?' class="key"':'')+'><td>'+T.toFixed(3)+'</td><td>'+v.toFixed(4)+'</td><td>'+(v*G).toFixed(3)+'</td><td>'+disp(v,T).toFixed(1)+'</td></tr>';
+    csvRows.push([T.toFixed(3), v.toFixed(4), (v*G).toFixed(3), disp(v,T).toFixed(1)]);
+  });
+  $('tbody').innerHTML = html;
+}
+
+function buildSensorTable(rows){
+  if(!rows.length){
+    $('sbody').innerHTML = '<tr><td colspan="5"><div class="empty">감지기를 추가하면 응답을 계산해요</div></td></tr>';
+    sensorCsv = [];
+    return;
+  }
+  var html = '';
+  sensorCsv = [['sensor','PGA(g)','PGA(m/s2)','Sd(mm)','vs_design(%)']];
+  rows.forEach(function(s){
+    var pct = s.ratio * 100;
+    var over = s.ratio > 1;
+    html += '<tr>' +
+      '<td><span class="namecell"><span class="swatch" style="background:'+s.color+'"></span>'+esc(s.name)+'</span></td>' +
+      '<td>'+s.pga.toFixed(3)+'</td>' +
+      '<td>'+(s.pga*G).toFixed(3)+'</td>' +
+      '<td>'+s.sd.toFixed(1)+'</td>' +
+      '<td><span class="tag '+(over?'no':'ok')+'">'+pct.toFixed(0)+'%</span></td>' +
+      '</tr>';
+    sensorCsv.push([s.name, s.pga.toFixed(3), (s.pga*G).toFixed(3), s.sd.toFixed(1), pct.toFixed(1)]);
+  });
+  $('sbody').innerHTML = html;
+}
+
+/* ── 렌더 ── */
+var LAST = null;
+
+function render(animate){
+  var inp = readInputs();
+  var r = compute(inp);
+
+  $('sManualBox').style.display = inp.manual ? '' : 'none';
+  $('f110').disabled = (inp.soil !== 'S5');
+  if(inp.soil !== 'S5') $('f110').checked = false;
+  $('stPeriod').textContent = inp.T.toFixed(3) + '초';
+
+  var pga0 = Sa(0, r, inp.eta);
+  var demand = Sa(inp.T, r, inp.eta);
+
+  var rows = sensors.map(function(s, i){
+    return {name:s.name || ('감지기 ' + (i+1)), pga:s.pga,
+            ratio:(demand > 0 ? s.pga / demand : 0),
+            sd:disp(s.pga, inp.T), color:COLORS[i % COLORS.length]};
+  });
+  var maxRow = rows.reduce(function(m, s){ return (!m || s.pga > m.pga) ? s : m; }, null);
+
+  var zoneName = (inp.Z === 0.11) ? 'I' : 'II';
+  $('cap').innerHTML = '<b>' + esc(inp.stName) + '</b> · 지진구역 ' + zoneName + ' · ' + inp.soil + ' 지반 · ' +
+                       inp.retLabel + ' 재현주기 · f = ' + inp.freq + 'Hz (T = ' + inp.T.toFixed(3) + '초)';
+  $('vSDS').innerHTML = r.SDS.toFixed(3) + '<span>g</span>';
+  $('vSD1').innerHTML = r.SD1.toFixed(3) + '<span>g</span>';
+  $('vDemand').innerHTML = demand.toFixed(3) + '<span>g</span>';
+  $('vMax').innerHTML = (maxRow ? maxRow.pga.toFixed(3) : '—') + '<span>g</span>';
+  $('boxMax').className = 'big' + (maxRow && maxRow.ratio > 1 ? ' alert' : '');
+
+  $('vS').textContent = inp.S.toFixed(3) + ' g';
+  $('vF').textContent = r.Fa.toFixed(3) + ' / ' + r.Fv.toFixed(3);
+  $('vT').textContent = r.T0.toFixed(3) + ' / ' + r.Ts.toFixed(3) + ' 초';
+  $('vPGA0').textContent = pga0.toFixed(3) + ' g';
+  $('vCat').textContent = category(r.SDS0, r.SD10, inp.grade) + ' 등급';
+
+  var judge = $('vJudge');
+  if(maxRow){
+    var pct = maxRow.ratio * 100;
+    judge.textContent = pct.toFixed(0) + '% · ' + (maxRow.ratio > 1 ? '설계 초과' : '설계 이내');
+    judge.className = 'pill ' + (maxRow.ratio > 1 ? 'no' : 'ok');
+  } else {
+    judge.textContent = '감지기 없음';
+    judge.className = 'pill ok';
+  }
+
+  $('sensorDesc').textContent = maxRow
+    ? esc(inp.stName) + '의 T = ' + inp.T.toFixed(3) + '초에서 계산한 값이에요'
+    : '감지기를 추가하면 응답을 계산해요';
+
+  var card = $('resultCard');
+  card.classList.remove('fade'); void card.offsetWidth; card.classList.add('fade');
+
+  LAST = {inp:inp, r:r, rows:rows, demand:demand, pga0:pga0, maxRow:maxRow,
+          cat:category(r.SDS0, r.SD10, inp.grade)};
+
+  $('chartDesc').textContent = '곡선 위를 눌러 값을 확인해 보세요 · 감쇠비 ' + inp.xi + '% 기준';
+  drawChart(inp, r, rows, animate !== false);
+  buildTable(inp, r);
+  buildSensorTable(rows);
+}
+
+document.querySelectorAll('.col-left input, .col-right input').forEach(function(el){
+  if(el.closest('#sensorList')) return;
+  el.addEventListener('change', function(){ render(true); });
+  if(el.type === 'number' || el.type === 'text') el.addEventListener('input', function(){ render(false); });
+});
+
+$('btnCsv').addEventListener('click', function(){
+  var lines = csvRows.map(function(row){ return row.join(','); });
+  if(sensorCsv.length){
+    lines.push('');
+    lines = lines.concat(sensorCsv.map(function(row){ return row.join(','); }));
+  }
+  var blob = new Blob(['\ufeff' + lines.join('\n')], {type:'text/csv;charset=utf-8'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'design_spectrum.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+});
+
+$('btnCopy').addEventListener('click', function(){
+  var txt = csvRows.map(function(row){ return row.join('\t'); }).join('\n');
+  var btn = $('btnCopy');
+  function done(ok){ btn.textContent = ok ? '복사했어요' : '복사하지 못했어요'; setTimeout(function(){ btn.textContent = '표 복사하기'; }, 1500); }
+  function fallback(){
+    var ta = document.createElement('textarea');
+    ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch(e){ ok = false; }
+    document.body.removeChild(ta); done(ok);
+  }
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(function(){ done(true); }, fallback);
+  } else fallback();
+});
+
+
+/* ══ PDF 보고서 ══ */
+function buildReport(){
+  if(!LAST) return;
+  var inp = LAST.inp, r = LAST.r, rows = LAST.rows;
+  var d = new Date();
+  var pad = function(n){ return (n < 10 ? '0' : '') + n; };
+  var zoneName = (inp.Z === 0.11) ? 'I' : 'II';
+
+  $('rpTitle').textContent = inp.stName;
+  $('rpMeta').innerHTML = '작성일 ' + d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) +
+    ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + '<br>감지기 ' + rows.length + '대 · 감쇠비 ' + inp.xi + '%';
+
+  var soilName = {S1:'암반',S2:'얕고 단단',S3:'얕고 연약',S4:'깊고 단단',S5:'깊고 연약'}[inp.soil];
+  var items = [
+    ['지진구역', '구역 ' + zoneName + ' (Z=' + inp.Z + ')', 0],
+    ['지반종류', inp.soil + ' · ' + soilName, 0],
+    ['재현주기', inp.retLabel, 0],
+    ['내진등급 / 설계범주', inp.grade + '등급 · ' + LAST.cat + '등급', 0],
+    ['유효지반가속도 S', inp.S.toFixed(3) + ' g', 0],
+    ['지반증폭계수 F<sub>a</sub> / F<sub>v</sub>', r.Fa.toFixed(3) + ' / ' + r.Fv.toFixed(3), 0],
+    ['S<sub>DS</sub> (단주기)', r.SDS.toFixed(3) + ' g', 1],
+    ['S<sub>D1</sub> (주기 1초)', r.SD1.toFixed(3) + ' g', 1],
+    ['제어주기 T<sub>0</sub> / T<sub>S</sub>', r.T0.toFixed(3) + ' / ' + r.Ts.toFixed(3) + ' 초', 0],
+    ['설계 지표면가속도 S<sub>a</sub>(0)', LAST.pga0.toFixed(3) + ' g', 0],
+    ['고유진동수 / 고유주기', inp.freq + ' Hz / ' + inp.T.toFixed(3) + ' 초', 0],
+    ['설계 응답 S<sub>a</sub>(T)', LAST.demand.toFixed(3) + ' g', 1]
+  ];
+  $('rpParams').innerHTML = items.map(function(it){
+    return '<div class="' + (it[2] ? 'hl' : '') + '"><div class="k">' + it[0] + '</div><div class="v">' + it[1] + '</div></div>';
+  }).join('');
+
+  var src = document.querySelector('#chart svg');
+  if(src){
+    var clone = src.cloneNode(true);
+    ['cursor','hit','trace'].forEach(function(id){
+      var el = clone.querySelector('#' + id);
+      if(!el) return;
+      if(id === 'trace'){ el.removeAttribute('id'); el.setAttribute('class','trace'); el.style.strokeDasharray=''; }
+      else el.parentNode.removeChild(el);
+    });
+    clone.removeAttribute('class');
+    clone.querySelectorAll('.trace').forEach(function(el){
+      el.setAttribute('fill','none'); el.setAttribute('stroke','#3182F6'); el.setAttribute('stroke-width','2.6');
+      el.setAttribute('stroke-linejoin','round'); el.setAttribute('stroke-linecap','round'); el.removeAttribute('style');
+    });
+    clone.querySelectorAll('.gl').forEach(function(el){ el.setAttribute('stroke','#EDEFF2'); });
+    clone.querySelectorAll('.mk').forEach(function(el){ el.setAttribute('stroke','#D1D6DB'); el.setAttribute('stroke-dasharray','3 4'); });
+    clone.querySelectorAll('.tline').forEach(function(el){ el.setAttribute('stroke','#333D4B'); el.setAttribute('stroke-dasharray','5 4'); });
+    clone.querySelectorAll('.axl').forEach(function(el){ el.setAttribute('fill','#8B95A1'); el.setAttribute('font-size','11'); });
+    clone.querySelectorAll('.axt').forEach(function(el){ el.setAttribute('fill','#6B7684'); el.setAttribute('font-size','11.5'); el.setAttribute('font-weight','600'); });
+    clone.querySelectorAll('.mkl').forEach(function(el){ el.setAttribute('fill','#8B95A1'); el.setAttribute('font-size','11'); });
+    clone.querySelectorAll('.tlab').forEach(function(el){ el.setAttribute('fill','#333D4B'); el.setAttribute('font-size','12'); el.setAttribute('font-weight','700'); });
+    $('rpChart').innerHTML = '';
+    $('rpChart').appendChild(clone);
+  }
+
+  var th = '<table class="rp-tbl"><thead><tr><th>감지기</th><th>계측 PGA (g)</th><th>가속도 (m/s²)</th><th>환산 변위 (mm)</th><th>설계 S<sub>a</sub>(T) 대비</th><th>판정</th></tr></thead><tbody>';
+  if(!rows.length){
+    th += '<tr><td colspan="6" style="text-align:center;color:#8B95A1">등록된 감지기가 없습니다</td></tr>';
+  } else {
+    rows.forEach(function(sn){
+      var over = sn.ratio > 1;
+      th += '<tr>' +
+        '<td><span class="sw" style="background:' + sn.color + '"></span>' + esc(sn.name) + '</td>' +
+        '<td>' + sn.pga.toFixed(3) + '</td>' +
+        '<td>' + (sn.pga * G).toFixed(3) + '</td>' +
+        '<td>' + sn.sd.toFixed(1) + '</td>' +
+        '<td>' + (sn.ratio * 100).toFixed(0) + ' %</td>' +
+        '<td class="' + (over ? 'no' : 'ok') + '">' + (over ? '초과' : '이내') + '</td>' +
+        '</tr>';
+    });
+  }
+  th += '</tbody></table>';
+  $('rpTable').innerHTML = th;
+
+  var jd = $('rpJudge');
+  if(LAST.maxRow){
+    var over = LAST.maxRow.ratio > 1;
+    jd.className = 'rp-judge' + (over ? ' no' : '');
+    jd.textContent = '계측 최대 ' + LAST.maxRow.pga.toFixed(3) + ' g (' + LAST.maxRow.name + ') · 설계 응답 ' +
+      LAST.demand.toFixed(3) + ' g 대비 ' + (LAST.maxRow.ratio * 100).toFixed(0) + '% — ' +
+      (over ? '설계값을 초과하여 정밀 점검이 필요합니다.' : '설계값 이내입니다.');
+  } else {
+    jd.className = 'rp-judge'; jd.textContent = '등록된 감지기가 없습니다.';
+  }
+}
+
+$('btnPdf').addEventListener('click', function(){ buildReport(); window.print(); });
+window.addEventListener('beforeprint', buildReport);
+
+renderSensorRows();
+render(true);
+</script>
+</body>
+</html>

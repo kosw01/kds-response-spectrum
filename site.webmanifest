@@ -1,0 +1,15 @@
+{
+  "name": "설계응답스펙트럼 · 구조물 응답 계산기",
+  "short_name": "응답스펙트럼",
+  "description": "KDS 41 17 00 기준 설계응답스펙트럼 생성 및 감지기 계측 응답 비교 도구",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#F2F4F6",
+  "theme_color": "#3182F6",
+  "lang": "ko",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}
