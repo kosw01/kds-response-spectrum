@@ -532,8 +532,7 @@ table.rp-tbl.dense th{padding:3px 6px}
   <div class="rp-foot">
     S<sub>DS</sub> = S × 2.5 × F<sub>a</sub> × 2/3, S<sub>D1</sub> = S × F<sub>v</sub> × 2/3, T<sub>S</sub> = S<sub>D1</sub>/S<sub>DS</sub>, T<sub>0</sub> = 0.2T<sub>S</sub>, T<sub>L</sub> = 5초 (KDS 41 17 00 : 2022 4.2).
     감지기 값은 계측된 PGA 단일 값으로, 구조물 고유주기 T 위치에서 설계 스펙트럼가속도와 비교한 것입니다. 환산 변위는 SDOF 근사 S<sub>a</sub>·g·T²/4π² 입니다.
-    감쇠비 5% 외의 값은 η = √(10/(5+ξ)) ≥ 0.55 (Eurocode 8) 보정으로, KDS에 규정된 절차가 아닙니다.
-    본 보고서는 검토용 산출물이며, 실제 판단은 계측 원파형 분석과 책임구조기술자의 검토를 거쳐야 합니다.
+    감쇠비 5% 외의 값은 η = √(10/(5+ξ)) ≥ 0.55 (Eurocode 8) 보정입니다.
   </div>
 </div>
 
@@ -924,8 +923,6 @@ $('btnCopy').addEventListener('click', function(){
 function buildReport(){
   if(!LAST) return;
   var inp = LAST.inp, r = LAST.r, rows = LAST.rows;
-  var d = new Date();
-  var pad = function(n){ return (n < 10 ? '0' : '') + n; };
   var zoneName = (inp.Z === 0.11) ? 'I' : 'II';
 
   $('rpTitle').textContent = inp.stName + ' 응답검토';
@@ -933,8 +930,7 @@ function buildReport(){
     '<span>대상지진<b>' + esc(inp.eqName || '—') + '</b></span>' +
     '<span>진앙지<b>' + esc(inp.eqEpi || '—') + '</b></span>' +
     '<span>발생시간<b>' + esc(inp.eqTime ? inp.eqTime.replace('T', ' ') : '—') + '</b></span>';
-  $('rpMeta').innerHTML = '작성일 ' + d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) +
-    ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + '<br>감지기 ' + rows.length + '대 · 감쇠비 ' + inp.xi + '%';
+  $('rpMeta').innerHTML = '감지기 ' + rows.length + '대 · 감쇠비 ' + inp.xi + '%';
 
   var soilName = {S1:'암반',S2:'얕고 단단',S3:'얕고 연약',S4:'깊고 단단',S5:'깊고 연약'}[inp.soil];
   var items = [
