@@ -84,6 +84,8 @@ body{
 .tfield input:focus{outline:none}
 .tfield input::placeholder{color:var(--g400);font-weight:500}
 .tfield .unit{font-size:14px;font-weight:600;color:var(--g500);flex:none}
+.tfield input[type=datetime-local]{font-size:15px;color:var(--g900);font-family:inherit}
+.tfield input[type=datetime-local]::-webkit-calendar-picker-indicator{cursor:pointer;opacity:.55}
 .tfield:focus-within{box-shadow:inset 0 0 0 2px var(--blue)}
 .sub{font-size:12.5px;color:var(--g500);margin-top:8px}
 .sub b{color:var(--blue-dark);font-weight:600}
@@ -213,6 +215,9 @@ tbody tr.key td:first-child{color:var(--blue-dark)}
   border-bottom:2px solid #191F28;padding-bottom:7px;margin-bottom:11px}
 .rp-kicker{font-size:8.5pt;font-weight:700;color:#3182F6;letter-spacing:.02em}
 .rp-head h1{font-size:16pt;font-weight:700;letter-spacing:-.02em;margin:3px 0 0;line-height:1.2}
+.rp-eq{display:flex;flex-wrap:wrap;gap:4px 16px;margin-top:5px;font-size:8pt;color:#6B7684;line-height:1.4}
+.rp-eq span{white-space:nowrap}
+.rp-eq b{color:#191F28;font-weight:700;margin-left:3px}
 .rp-head .meta{font-size:8pt;color:#6B7684;text-align:right;line-height:1.5;white-space:nowrap}
 .rp-sec{margin-bottom:10px;break-inside:avoid}
 .rp-sec h2{font-size:10pt;font-weight:700;margin:0 0 6px;padding-left:7px;border-left:3px solid #3182F6;line-height:1.25}
@@ -233,6 +238,9 @@ table.rp-tbl td:first-child{text-align:left;font-weight:600}
 table.rp-tbl .sw{display:inline-block;width:7px;height:7px;border-radius:2px;margin-right:5px;vertical-align:middle}
 table.rp-tbl .ok{color:#00A05B;font-weight:700}
 table.rp-tbl .no{color:#F04452;font-weight:700}
+.rp-cols{display:grid;grid-template-columns:1fr 1fr;gap:0 8px;align-items:start}
+table.rp-tbl.dense td{padding:2.4px 6px}
+table.rp-tbl.dense th{padding:3px 6px}
 .rp-judge{margin:7px 0 0;font-size:8.5pt;font-weight:700;padding:6px 10px;border-radius:4px;background:#E8F8F0;color:#00A05B}
 .rp-judge.no{background:#FFF0F0;color:#F04452}
 .rp-foot{margin-top:10px;border-top:1px solid #D1D6DB;padding-top:6px;font-size:7pt;color:#8B95A1;line-height:1.5}
@@ -328,6 +336,23 @@ table.rp-tbl .no{color:#F04452;font-weight:700}
             <input type="radio" name="damp" id="d10" value="10"><label for="d10">10%</label>
             <input type="radio" name="damp" id="d20" value="20"><label for="d20">20%</label>
           </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>대상 지진</h2>
+        <p class="desc">보고서 머리말에 들어갈 지진 정보예요</p>
+        <div class="group">
+          <span class="lab">지진명</span>
+          <div class="tfield"><input type="text" id="eqName" value="" placeholder="예: 2016 경주지진"></div>
+        </div>
+        <div class="group">
+          <span class="lab">진앙지</span>
+          <div class="tfield"><input type="text" id="eqEpi" value="" placeholder="예: 경북 경주시 남남서쪽 8km"></div>
+        </div>
+        <div class="group">
+          <span class="lab">발생시간</span>
+          <div class="tfield"><input type="datetime-local" id="eqTime" value=""></div>
         </div>
       </section>
 
@@ -482,7 +507,8 @@ table.rp-tbl .no{color:#F04452;font-weight:700}
   <div class="rp-head">
     <div>
       <div class="rp-kicker">KDS 41 17 00 : 2022 · 설계응답스펙트럼 검토</div>
-      <h1 id="rpTitle">구조물</h1>
+      <h1 id="rpTitle">구조물 응답검토</h1>
+      <div class="rp-eq" id="rpEq"></div>
     </div>
     <div class="meta" id="rpMeta"></div>
   </div>
@@ -594,7 +620,8 @@ function readInputs(){
     grade:rv('grade'), xi:xi,
     eta:Math.max(0.55, Math.sqrt(10/(5+xi))),
     tmax:parseFloat(rv('tmax')), dt:parseFloat(rv('dt')),
-    stName:($('stName').value || '구조물'), freq:freq, T:1/freq
+    stName:($('stName').value || '구조물'), freq:freq, T:1/freq,
+    eqName:$('eqName').value.trim(), eqEpi:$('eqEpi').value.trim(), eqTime:$('eqTime').value
   };
 }
 
@@ -814,7 +841,8 @@ function render(animate){
   var maxRow = rows.reduce(function(m, s){ return (!m || s.pga > m.pga) ? s : m; }, null);
 
   var zoneName = (inp.Z === 0.11) ? 'I' : 'II';
-  $('cap').innerHTML = '<b>' + esc(inp.stName) + '</b> · 지진구역 ' + zoneName + ' · ' + inp.soil + ' 지반 · ' +
+  $('cap').innerHTML = (inp.eqName ? esc(inp.eqName) + ' · ' : '') +
+                       '<b>' + esc(inp.stName) + '</b> · 지진구역 ' + zoneName + ' · ' + inp.soil + ' 지반 · ' +
                        inp.retLabel + ' 재현주기 · f = ' + inp.freq + 'Hz (T = ' + inp.T.toFixed(3) + '초)';
   $('vSDS').innerHTML = r.SDS.toFixed(3) + '<span>g</span>';
   $('vSD1').innerHTML = r.SD1.toFixed(3) + '<span>g</span>';
@@ -900,7 +928,11 @@ function buildReport(){
   var pad = function(n){ return (n < 10 ? '0' : '') + n; };
   var zoneName = (inp.Z === 0.11) ? 'I' : 'II';
 
-  $('rpTitle').textContent = inp.stName;
+  $('rpTitle').textContent = inp.stName + ' 응답검토';
+  $('rpEq').innerHTML =
+    '<span>대상지진<b>' + esc(inp.eqName || '—') + '</b></span>' +
+    '<span>진앙지<b>' + esc(inp.eqEpi || '—') + '</b></span>' +
+    '<span>발생시간<b>' + esc(inp.eqTime ? inp.eqTime.replace('T', ' ') : '—') + '</b></span>';
   $('rpMeta').innerHTML = '작성일 ' + d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) +
     ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + '<br>감지기 ' + rows.length + '대 · 감쇠비 ' + inp.xi + '%';
 
@@ -944,28 +976,38 @@ function buildReport(){
     clone.querySelectorAll('.axt').forEach(function(el){ el.setAttribute('fill','#6B7684'); el.setAttribute('font-size','11.5'); el.setAttribute('font-weight','600'); });
     clone.querySelectorAll('.mkl').forEach(function(el){ el.setAttribute('fill','#8B95A1'); el.setAttribute('font-size','11'); });
     clone.querySelectorAll('.tlab').forEach(function(el){ el.setAttribute('fill','#333D4B'); el.setAttribute('font-size','12'); el.setAttribute('font-weight','700'); });
+    clone.style.maxHeight = (rows.length > 8 ? '66mm' : '74mm');
     $('rpChart').innerHTML = '';
     $('rpChart').appendChild(clone);
   }
 
-  var th = '<table class="rp-tbl"><thead><tr><th>감지기</th><th>계측 PGA (g)</th><th>가속도 (m/s²)</th><th>환산 변위 (mm)</th><th>설계 S<sub>a</sub>(T) 대비</th><th>판정</th></tr></thead><tbody>';
-  if(!rows.length){
-    th += '<tr><td colspan="6" style="text-align:center;color:#8B95A1">등록된 감지기가 없습니다</td></tr>';
-  } else {
-    rows.forEach(function(sn){
+  var split = rows.length > 8;
+  function tbl(list, dense){
+    var h = '<table class="rp-tbl' + (dense ? ' dense' : '') + '"><thead><tr><th>감지기</th><th>PGA (g)</th>' +
+            (dense ? '' : '<th>가속도 (m/s²)</th>') +
+            '<th>변위 (mm)</th><th>설계 대비</th><th>판정</th></tr></thead><tbody>';
+    list.forEach(function(sn){
       var over = sn.ratio > 1;
-      th += '<tr>' +
+      h += '<tr>' +
         '<td><span class="sw" style="background:' + sn.color + '"></span>' + esc(sn.name) + '</td>' +
         '<td>' + sn.pga.toFixed(3) + '</td>' +
-        '<td>' + (sn.pga * G).toFixed(3) + '</td>' +
+        (dense ? '' : '<td>' + (sn.pga * G).toFixed(3) + '</td>') +
         '<td>' + sn.sd.toFixed(1) + '</td>' +
         '<td>' + (sn.ratio * 100).toFixed(0) + ' %</td>' +
         '<td class="' + (over ? 'no' : 'ok') + '">' + (over ? '초과' : '이내') + '</td>' +
         '</tr>';
     });
+    return h + '</tbody></table>';
   }
-  th += '</tbody></table>';
-  $('rpTable').innerHTML = th;
+  if(!rows.length){
+    $('rpTable').innerHTML = '<table class="rp-tbl"><tbody><tr><td style="text-align:center;color:#8B95A1">등록된 감지기가 없습니다</td></tr></tbody></table>';
+  } else if(split){
+    var half = Math.ceil(rows.length / 2);
+    $('rpTable').innerHTML = '<div class="rp-cols"><div>' + tbl(rows.slice(0, half), true) +
+                             '</div><div>' + tbl(rows.slice(half), true) + '</div></div>';
+  } else {
+    $('rpTable').innerHTML = tbl(rows, false);
+  }
 
   var jd = $('rpJudge');
   if(LAST.maxRow){
