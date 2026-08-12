@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>개인정보처리방침 · 설계응답스펙트럼</title>
+<meta name="description" content="설계응답스펙트럼 앱의 개인정보처리방침입니다. 이 앱은 개인정보를 수집하지 않습니다.">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+:root{
+  --blue:#0B6BCB; --blue-dark:#08549F; --blue-bg:#E3F0FC;
+  --g900:#191F28; --g700:#4E5968; --g500:#8B95A1; --g200:#E5E8EB; --g100:#F2F4F6;
+  --font:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,system-ui,"Apple SD Gothic Neo",sans-serif;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--g100);color:var(--g900);font-family:var(--font);
+  font-size:15px;line-height:1.7;letter-spacing:-.01em;-webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:680px;margin:0 auto;padding:0 20px 80px}
+header{padding:48px 4px 28px}
+header .kicker{font-size:13px;font-weight:600;color:var(--blue);margin-bottom:10px}
+header h1{font-size:26px;font-weight:700;letter-spacing:-.03em;margin:0}
+header .date{margin-top:12px;font-size:13px;color:var(--g500)}
+.card{background:#fff;border-radius:20px;padding:26px 22px;margin-bottom:14px}
+.card h2{font-size:17px;font-weight:700;letter-spacing:-.02em;margin:0 0 12px}
+.card p{margin:0 0 12px;color:var(--g700)}
+.card p:last-child{margin-bottom:0}
+.card ul{margin:0 0 12px;padding-left:20px;color:var(--g700)}
+.card li{margin-bottom:6px}
+.lead{background:var(--blue-bg);border-radius:20px;padding:24px 22px;margin-bottom:14px}
+.lead p{margin:0;color:var(--blue-dark);font-weight:600;font-size:16px;line-height:1.6}
+table{width:100%;border-collapse:collapse;font-size:14px;margin:4px 0 12px}
+th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--g200)}
+th{color:var(--g500);font-size:12.5px;font-weight:600}
+td{color:var(--g700)}
+a{color:var(--blue);text-decoration:none;font-weight:600}
+a:hover{text-decoration:underline}
+footer{text-align:center;padding:24px 0 0;font-size:12.5px;color:var(--g500);line-height:1.8}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="kicker">설계응답스펙트럼 · Design Response Spectrum</div>
+    <h1>개인정보처리방침</h1>
+    <p class="date">시행일 2026년 8월 12일</p>
+  </header>
+
+  <section class="lead">
+    <p>이 앱은 어떠한 개인정보도 수집하거나 전송하지 않습니다.<br>
+    모든 계산은 사용자의 기기 안에서만 이루어집니다.</p>
+  </section>
+
+  <section class="card">
+    <h2>1. 수집하는 정보</h2>
+    <p>이 앱은 개인정보를 일절 수집하지 않습니다. 회원가입이나 로그인 절차가 없으며,
+    이름·이메일·전화번호·위치·기기 식별자 등 어떠한 개인 식별 정보도 요구하지 않습니다.</p>
+    <p>사용자가 앱에 입력하는 구조물 정보, 지진 정보, 감지기 계측값은 계산을 위해 기기 메모리에서만
+    사용되며 외부로 전송되지 않습니다.</p>
+  </section>
+
+  <section class="card">
+    <h2>2. 네트워크 통신</h2>
+    <p>이 앱은 인터넷에 연결하지 않습니다. 광고, 분석 도구, 크래시 리포트 등
+    외부 서비스를 사용하지 않으며, 서버로 데이터를 보내지 않습니다.</p>
+    <p>인터넷 연결 없이 모든 기능을 사용할 수 있습니다.</p>
+  </section>
+
+  <section class="card">
+    <h2>3. 기기 내 저장</h2>
+    <p>사용자가 PDF 보고서 저장 기능을 사용할 경우, 생성된 PDF 파일이 기기의 저장소에 기록됩니다.
+    이 파일은 사용자 본인만 접근할 수 있으며, 앱은 저장된 파일을 읽거나 외부로 전송하지 않습니다.</p>
+    <p>PDF 공유 기능은 안드로이드의 표준 공유 기능을 이용하며,
+    어느 앱으로 보낼지는 전적으로 사용자가 선택합니다.</p>
+  </section>
+
+  <section class="card">
+    <h2>4. 권한</h2>
+    <table>
+      <thead><tr><th>권한</th><th>사용 목적</th></tr></thead>
+      <tbody>
+        <tr><td>파일 저장</td><td>PDF 보고서를 기기에 저장하기 위해서만 사용</td></tr>
+      </tbody>
+    </table>
+    <p>위치, 카메라, 연락처, 마이크, 통화 기록 등 민감한 권한은 요청하지 않습니다.</p>
+  </section>
+
+  <section class="card">
+    <h2>5. 제3자 제공</h2>
+    <p>수집하는 정보가 없으므로 제3자에게 제공하거나 위탁하는 정보도 없습니다.</p>
+  </section>
+
+  <section class="card">
+    <h2>6. 아동의 개인정보</h2>
+    <p>이 앱은 만 14세 미만 아동을 대상으로 하지 않으며,
+    연령과 무관하게 어떠한 개인정보도 수집하지 않습니다.</p>
+  </section>
+
+  <section class="card">
+    <h2>7. 방침 변경</h2>
+    <p>이 방침이 변경될 경우 이 페이지에 수정된 내용과 시행일을 게시합니다.
+    중요한 변경이 있을 때에는 앱 업데이트를 통해 안내합니다.</p>
+  </section>
+
+  <section class="card">
+    <h2>8. 면책</h2>
+    <p>이 앱은 KDS 41 17 00 기준에 따른 검토용 계산 도구입니다.
+    산출된 결과는 참고 자료이며, 실제 설계와 구조물 안전성 판단은
+    관련 기준 원문 확인과 책임구조기술자의 검토를 거쳐야 합니다.
+    앱 사용으로 인해 발생한 판단이나 결과에 대해 개발자는 책임을 지지 않습니다.</p>
+  </section>
+
+  <section class="card">
+    <h2>9. 문의</h2>
+    <p>개인정보처리방침에 관한 문의는 아래로 연락해 주세요.</p>
+    <p><a href="mailto:kosw1116@gmail.com">kosw1116@gmail.com</a></p>
+  </section>
+
+  <footer>
+    설계응답스펙트럼 · Design Response Spectrum<br>
+    <a href="./">계산기 웹 버전으로 돌아가기</a>
+  </footer>
+
+</div>
+</body>
+</html>
